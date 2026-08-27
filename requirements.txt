@@ -6,3 +6,7 @@ eventlet
 # Phase 2: Monitoring agent
 # Note: Using SQLite for metrics storage (built into Python)
 # instead of InfluxDB for simplicity in this environment
+
+# Phase 3: Detection Engine
+scikit-learn
+joblib

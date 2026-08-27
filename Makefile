@@ -1,4 +1,4 @@
-.PHONY: build up down test test-monitoring clean logs
+.PHONY: build up down test test-monitoring test-detection clean logs
 
 build:
 	docker compose build
@@ -14,6 +14,9 @@ test:
 
 test-monitoring:
 	docker compose run --rm monitoring-agent python -m pytest tests/test_monitoring.py -v
+
+test-detection:
+	docker compose run --rm monitoring-agent python -m pytest tests/test_detection.py -v
 
 logs:
 	docker compose logs -f

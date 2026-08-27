@@ -126,12 +126,38 @@
 ---
 
 ## Phase 3: Detection Engine  
-**Status:** Not started
+**Completed:** 2026-08-27  
+**Commit:** Pending
 
----
+### What was built
+1. **Model Training Script** (`detection/train_baseline.py`)
+   - Generates synthetic baseline normal traffic data.
+   - Trains an `IsolationForest` (from `scikit-learn`) model.
+   - Saves the model to `detection/model.pkl`.
 
-## Phase 3: Detection Engine  
-**Status:** Not started
+2. **Anomaly Model module** (`detection/anomaly_model.py`)
+   - Loads the pre-trained `IsolationForest` model.
+   - Exposes `is_anomalous(reading) -> (bool, score)` function.
+   - Implements a robust threshold-based fallback logic (flagging >20% loss or >100ms latency immediately).
+
+3. **Infrastructure & Setup**
+   - Added `scikit-learn` and `joblib` to `requirements.txt`.
+   - Updated `monitoring/Dockerfile` to install ML packages and copy the `detection/` module.
+   - Added `test-detection` target to the `Makefile`.
+
+### Testing & Verification
+- **Test Suite**: Created `tests/test_detection.py` to cover ML training, ML predictions, and threshold logic.
+- **Measured Metrics on Synthetic Data**:
+  - **False Positive Rate**: 0.60% (Requirement: < 10%)
+  - **Detection Latency**: 0.0241 seconds (Requirement: < 2s)
+- **Environment**: Ran tests successfully inside the dockerized `monitoring-agent` container.
+
+### Architecture Decisions & Deviations
+- Used the `monitoring-agent` container to run `test-detection` instead of a dedicated `backend` container, as `backend` will not be created until Phase 5. This matches the deviation taken in Phase 2.
+
+### Next Phase (Phase 4)
+- Build self-healing logic to automatically recompute a new path when an anomaly is detected.
+- Wire the Detection Engine into the Ryu Controller's reroute logic.
 
 ---
 

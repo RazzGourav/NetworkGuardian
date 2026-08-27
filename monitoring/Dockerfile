@@ -18,15 +18,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python testing dependencies
-RUN pip install --no-cache-dir pytest
+# Install Python testing dependencies and ML packages for detection engine
+RUN pip install --no-cache-dir pytest scikit-learn joblib
 
 # Create application directories
 WORKDIR /app
-RUN mkdir -p /app/logs /app/monitoring
+RUN mkdir -p /app/logs /app/monitoring /app/detection
 
 # Copy monitoring agent code (requirements are minimal - just standard Python)
 COPY monitoring/ /app/monitoring/
+COPY detection/ /app/detection/
 COPY tests/ /app/tests/
 
 # Create volume mount points
