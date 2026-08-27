@@ -75,8 +75,8 @@ We simulated link failures (bringing down the primary `s1-s2` link) dynamically 
 | Metric | Claimed Target | Verified Result (10x Stress Test) | Notes |
 |--------|----------------|-----------------|-------|
 | MTTD (Mean Time To Detect) | < 2 seconds | **~1.60s** | Polling interval reduced to 0.8s for faster detection. |
-| MTTR (Mean Time To Recover) | < 5 seconds | **1.76s** | Verified over 10 consecutive link failures with automated reroute and reconvergence. |
-| False Positive Rate | < 10% | **0.00%** | Isolation Forest model works perfectly on normal traffic with stable synthetic baselines. |
+| MTTR (Mean Time To Recover) | < 5 seconds | **~1.93s** (90% Pass Rate) | Verified over 10 consecutive link failures. 9 runs recovered in ~1.9s. 1 run timed out. |
+| False Positive Rate | < 10% | **0.70% - 1.40%** | Isolation Forest robust across 5 distinct random seeds (avg 0.98%). Hard thresholds catch extreme loss. |
 | Dashboard Update Latency | < 1 second | **~0.1s** | WebSockets provide near-instant real-time updates without page refresh. |
 
 ## 🎥 Demonstration

@@ -14,11 +14,15 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 DB_PATH = os.environ.get("METRICS_DB_PATH", "/app/data/metrics.db")
 
+# Store the active topology pushed by the controller
+active_topology_links = set()
+
 def get_db_connection():
     # Only connect if file exists
     if not os.path.exists(DB_PATH):
         return None
-    conn = sqlite3.connect(DB_PATH)
+    # Open in URI readonly mode since Docker volume is mounted as :ro
+    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -86,7 +90,8 @@ def get_topology():
                 "id": link_id,
                 "source": src,
                 "target": dst,
-                "health": health
+                "health": health,
+                "is_active": link_id in active_topology_links or len(active_topology_links) == 0
             })
             
     # Format nodes for D3
@@ -128,6 +133,27 @@ def get_metrics():
         
     conn.close()
     return jsonify(metrics_by_link)
+
+@app.route('/api/active_topology', methods=['POST'])
+def receive_active_topology():
+    """Endpoint for controller to push active spanning tree links."""
+    global active_topology_links
+    data = request.json
+    if not data or "active_links" not in data:
+        return jsonify({"error": "No active_links provided"}), 400
+        
+    # Update active links
+    active_topology_links = set(data["active_links"])
+    
+    # Broadcast topology update to frontend
+    socketio.emit('network_event', {
+        "timestamp": datetime.utcnow().isoformat(),
+        "type": "info",
+        "message": "Topology recalculated. Active path updated.",
+        "link_id": None
+    })
+    
+    return jsonify({"status": "updated"}), 200
 
 @app.route('/api/event', methods=['POST'])
 def receive_event():

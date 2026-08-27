@@ -181,7 +181,7 @@ git push origin main
 
 **Verify command:**
 ```bash
-docker compose run backend pytest tests/test_monitoring.py
+docker compose run monitoring-agent pytest tests/test_monitoring.py
 ```
 
 **Commit & push:**
@@ -216,7 +216,7 @@ git push origin main
 
 **Verify command:**
 ```bash
-docker compose run backend pytest tests/test_detection.py
+docker compose run monitoring-agent pytest tests/test_detection.py
 ```
 
 **Commit & push:**

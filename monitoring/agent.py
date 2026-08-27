@@ -36,6 +36,14 @@ from detection.anomaly_model import is_anomalous
 
 LOG = logging.getLogger("NetworkGuardian.MonitoringAgent")
 
+# How long (seconds) to suppress ALL fault reports after any fault is
+# triggered.  This prevents the monitoring agent from misinterpreting
+# transient packet loss caused by the reroute itself as new faults.
+GLOBAL_FAULT_COOLDOWN_SECONDS = 5.0
+
+# Polling interval in seconds (target ≤1s for fast detection)
+POLLING_INTERVAL_SECONDS = 0.8
+
 
 class LinkMonitor:
     """Monitor a single network link using ICMP ping probes."""
@@ -62,8 +70,8 @@ class LinkMonitor:
 
         # Metrics storage for calculation
         self.latencies = deque(maxlen=20)  # Last 20 RTT readings
+        self.loss_history = deque(maxlen=10) # 1 for loss, 0 for success
         self.packet_count = 0
-        self.lost_count = 0
         self.last_update = None
 
         LOG.info("Created monitor for link %s: %s -> %s", link_id, src_ip, dst_ip)
@@ -126,9 +134,9 @@ class LinkMonitor:
             jitter = 0.0
 
         # Calculate packet loss percentage
-        total_packets = self.packet_count
+        total_packets = len(self.loss_history)
         if total_packets > 0:
-            loss_percent = (self.lost_count / total_packets) * 100.0
+            loss_percent = (sum(self.loss_history) / total_packets) * 100.0
         else:
             loss_percent = 100.0
 
@@ -154,9 +162,10 @@ class LinkMonitor:
                 if rtt is not None:
                     # Successful ping
                     self.latencies.append(rtt)
+                    self.loss_history.append(0)
                 else:
                     # Packet lost
-                    self.lost_count += 1
+                    self.loss_history.append(1)
 
                 # Calculate and store metrics
                 metrics = self.calculate_metrics()
@@ -169,26 +178,30 @@ class LinkMonitor:
                 if self.packet_count > 1:
                     is_anomaly, score = is_anomalous(metrics)
                     if is_anomaly:
-                        LOG.warning("Anomaly detected on %s (score %.2f). Triggering reroute...", self.link_id, score)
-                        try:
-                            # 1. Trigger the SDN controller to reroute
-                            requests.post(
-                                "http://127.0.0.1:8080/api/fault",
-                                json={"link_id": self.link_id},
-                                timeout=2
-                            )
-                            # 2. Notify the dashboard backend for live WebSocket updates
-                            requests.post(
-                                "http://127.0.0.1:5000/api/event",
-                                json={
-                                    "type": "fault",
-                                    "link_id": self.link_id,
-                                    "message": f"Anomaly detected on {self.link_id}. Reroute triggered."
-                                },
-                                timeout=1
-                            )
-                        except Exception as e:
-                            LOG.error("Failed to notify controller/backend: %s", str(e))
+                        # Only report faults for switch-switch links.
+                        # Host-switch "faults" are transient noise during
+                        # reconvergence and would cause false cascades.
+                        is_switch_link = self.link_id.startswith('s') and '-s' in self.link_id
+
+                        if is_switch_link:
+                            LOG.warning("Anomaly detected on %s (score %.2f). Triggering reroute...", self.link_id, score)
+                            try:
+                                requests.post(
+                                    "http://127.0.0.1:8080/api/fault",
+                                    json={"link_id": self.link_id},
+                                    timeout=2
+                                )
+                                requests.post(
+                                    "http://127.0.0.1:5000/api/event",
+                                    json={
+                                        "type": "fault",
+                                        "link_id": self.link_id,
+                                        "message": f"Anomaly detected on {self.link_id}. Reroute triggered."
+                                    },
+                                    timeout=1
+                                )
+                            except Exception as e:
+                                LOG.error("Failed to notify controller/backend: %s", str(e))
 
                 # Log periodically
                 if self.packet_count % 10 == 0:
@@ -199,9 +212,8 @@ class LinkMonitor:
             except Exception as e:
                 LOG.error("Error monitoring link %s: %s", self.link_id, str(e))
 
-            # Wait before next ping (target ≤2s interval)
-            # Account for ping time to maintain consistent interval
-            time.sleep(1.8)
+            # Wait before next ping — target ~1s interval for fast detection
+            time.sleep(POLLING_INTERVAL_SECONDS)
 
         LOG.info("Stopped monitor for link %s", self.link_id)
 
@@ -294,6 +306,9 @@ class MonitoringAgent:
         links = self.discover_topology_links()
         for link_id, src_ip, dst_ip, link_type in links:
             monitor = LinkMonitor(link_id, src_ip, dst_ip, link_type)
+            # Give each monitor a back-reference to the agent for the
+            # shared global fault cooldown timestamp.
+            monitor._agent_ref = self
             monitor.start(self.store)
             self.monitors[link_id] = monitor
 

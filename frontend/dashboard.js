@@ -147,6 +147,11 @@ function initD3() {
         .attr("fill", "rgba(255,255,255,0.3)")
         .attr("d", "M0,-5L10,0L0,5");
 
+    // Initialize groups if they don't exist
+    svg.append("g").attr("class", "links");
+    svg.append("g").attr("class", "nodes");
+    svg.append("g").attr("class", "labels");
+
     simulation = d3.forceSimulation()
         .force("link", d3.forceLink().id(d => d.id).distance(100))
         .force("charge", d3.forceManyBody().strength(-400))
@@ -166,26 +171,37 @@ async function fetchTopology() {
 }
 
 function renderTopology() {
-    // Clear old elements
-    svg.selectAll(".links").remove();
-    svg.selectAll(".nodes").remove();
-    svg.selectAll(".labels").remove();
+    // Update links
+    link = svg.select(".links").selectAll("line")
+        .data(topologyData.links, d => d.id);
+        
+    link.exit().remove();
     
-    // Group links
-    const linkGroup = svg.append("g").attr("class", "links");
-    link = linkGroup.selectAll("line")
-        .data(topologyData.links)
-        .enter().append("line")
-        .attr("class", "link")
-        .attr("stroke-width", d => d.health === 'down' ? 1 : (d.health === 'degraded' ? 3 : 2))
-        .attr("stroke", d => COLORS[d.health] || 'rgba(255,255,255,0.2)')
-        .attr("stroke-dasharray", d => d.health === 'down' ? "5,5" : "none");
+    const linkEnter = link.enter().append("line")
+        .attr("class", "link");
+        
+    link = linkEnter.merge(link)
+        .attr("stroke-width", d => {
+            if (d.health === 'down') return 1;
+            if (d.health === 'degraded') return 3;
+            return d.is_active ? 4 : 2;
+        })
+        .attr("stroke", d => {
+            if (d.health === 'down') return '#ef4444'; // COLORS.down
+            if (d.health === 'degraded') return '#f59e0b'; // COLORS.degraded
+            return d.is_active ? '#34d399' : 'rgba(255,255,255,0.1)';
+        })
+        .attr("stroke-dasharray", d => d.health === 'down' ? "5,5" : "none")
+        // Glow effect for active links
+        .style("filter", d => d.is_active && d.health === 'healthy' ? "drop-shadow(0px 0px 5px #34d399)" : "none");
 
-    // Group nodes
-    const nodeGroup = svg.append("g").attr("class", "nodes");
-    node = nodeGroup.selectAll("circle")
-        .data(topologyData.nodes)
-        .enter().append("circle")
+    // Update nodes
+    node = svg.select(".nodes").selectAll("circle")
+        .data(topologyData.nodes, d => d.id);
+        
+    node.exit().remove();
+    
+    const nodeEnter = node.enter().append("circle")
         .attr("class", "node")
         .attr("r", d => d.type === 'switch' ? 20 : 14)
         .attr("fill", d => d.type === 'switch' ? COLORS.switch : COLORS.host)
@@ -195,19 +211,30 @@ function renderTopology() {
             .on("start", dragstarted)
             .on("drag", dragged)
             .on("end", dragended));
+            
+    node = nodeEnter.merge(node);
 
-    // Group labels
-    const labelGroup = svg.append("g").attr("class", "labels");
-    labels = labelGroup.selectAll("text")
-        .data(topologyData.nodes)
-        .enter().append("text")
+    // Update labels
+    labels = svg.select(".labels").selectAll("text")
+        .data(topologyData.nodes, d => d.id);
+        
+    labels.exit().remove();
+    
+    const labelsEnter = labels.enter().append("text")
         .attr("class", "node-label")
         .attr("dy", d => d.type === 'switch' ? 5 : 4)
         .text(d => d.id);
+        
+    labels = labelsEnter.merge(labels);
 
     simulation.nodes(topologyData.nodes).on("tick", ticked);
     simulation.force("link").links(topologyData.links);
-    simulation.alpha(1).restart();
+    
+    if (nodeEnter.size() > 0 || linkEnter.size() > 0) {
+        simulation.alpha(1).restart();
+    } else {
+        simulation.alpha(0.1).restart();
+    }
 }
 
 function ticked() {
