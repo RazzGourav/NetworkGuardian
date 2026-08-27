@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python testing dependencies and ML packages for detection engine
-RUN pip install --no-cache-dir pytest scikit-learn joblib
+RUN pip install --no-cache-dir pytest scikit-learn joblib requests
 
 # Create application directories
 WORKDIR /app

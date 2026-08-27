@@ -29,7 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Ryu + eventlet, then patch the Ryu wsgi module.
 # Ryu 4.34 imports eventlet.wsgi.ALREADY_HANDLED which was removed in
 # eventlet ≥ 0.31. We inject the constant back via a sitecustomize patch.
-RUN pip3 install --no-cache-dir ryu eventlet
+RUN pip3 install --no-cache-dir ryu eventlet networkx pytest requests scikit-learn joblib
 
 # Patch: restore ALREADY_HANDLED for Ryu compatibility
 RUN python3 -c "\
@@ -45,6 +45,9 @@ print('Patched', src)"
 WORKDIR /app
 COPY topology/  /app/topology/
 COPY controller/ /app/controller/
+COPY monitoring/ /app/monitoring/
+COPY detection/ /app/detection/
+COPY tests/ /app/tests/
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 

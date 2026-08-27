@@ -10,3 +10,7 @@ eventlet
 # Phase 3: Detection Engine
 scikit-learn
 joblib
+
+# Phase 4: Auto-Rerouting Engine
+networkx
+requests

@@ -27,7 +27,7 @@ echo "[2/3] Starting Ryu controller..."
 ryu-manager /app/controller/ryu_app.py \
     --ofp-tcp-listen-port 6653 \
     --verbose \
-    > /tmp/ryu.log 2>&1 &
+    > /app/logs/ryu.log 2>&1 &
 RYU_PID=$!
 
 # Give the controller a moment to bind
@@ -37,7 +37,7 @@ if kill -0 "$RYU_PID" 2>/dev/null; then
     echo "      Ryu controller is running (PID $RYU_PID)."
 else
     echo "ERROR: Ryu controller failed to start. Logs:"
-    cat /tmp/ryu.log
+    cat /app/logs/ryu.log
     exit 1
 fi
 
@@ -45,6 +45,7 @@ fi
 echo "[3/3] Starting Mininet topology..."
 
 # If arguments are passed and they match "--test pingall", use our custom test script
+# If they match "--test fault", use the fault injection test script
 # Otherwise, pass arguments through to mn
 if [ "$#" -eq 2 ] && [ "$1" = "--test" ] && [ "$2" = "pingall" ]; then
     echo "      Running custom pingall test..."
@@ -53,6 +54,21 @@ if [ "$#" -eq 2 ] && [ "$1" = "--test" ] && [ "$2" = "pingall" ]; then
     TEST_EXIT=$?
     echo "=== NetworkGuardian: shutting down ==="
     kill "$RYU_PID" 2>/dev/null || true
+    service openvswitch-switch stop 2>/dev/null || true
+    exit $TEST_EXIT
+elif [ "$#" -eq 2 ] && [ "$1" = "--test" ] && [ "$2" = "fault" ]; then
+    set +e  # Disable set -e for the test so we can safely catch errors
+    echo "      Cleaning up old Mininet state..."
+    mn -c >/dev/null 2>&1
+    echo "      Running fault injection test..."
+    cd /app
+    TEST_EXIT=0
+    python3 -m pytest tests/test_fault_injection.py -v -s
+    TEST_EXIT=$?
+    if [ $TEST_EXIT -ne 0 ]; then
+        echo "Pytest failed. Ryu logs:"
+        cat /app/logs/ryu.log
+    fi
     service openvswitch-switch stop 2>/dev/null || true
     exit $TEST_EXIT
 elif [ "$#" -gt 0 ]; then

@@ -29,12 +29,15 @@ from pathlib import Path
 LOG = logging.getLogger("NetworkGuardian.MetricsStore")
 
 
+import threading
+
 class MetricsStore:
     """SQLite-based time-series metrics storage for network link health."""
 
     def __init__(self, db_path: str = "/app/monitoring/metrics.db"):
         self.db_path = db_path
         self.conn: Optional[sqlite3.Connection] = None
+        self.lock = threading.Lock()
         LOG.info("MetricsStore initialized for %s", db_path)
 
     def connect(self) -> sqlite3.Connection:
@@ -44,7 +47,7 @@ class MetricsStore:
             db_path_obj = Path(self.db_path)
             db_path_obj.parent.mkdir(parents=True, exist_ok=True)
 
-            self.conn = sqlite3.connect(self.db_path)
+            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
             self.conn.row_factory = sqlite3.Row  # Return dict-like rows
             LOG.debug("Connected to SQLite database at %s", self.db_path)
 
@@ -55,8 +58,9 @@ class MetricsStore:
         conn = self.connect()
         cursor = conn.cursor()
 
-        # Create metrics table
-        cursor.execute("""
+        with self.lock:
+            # Create metrics table
+            cursor.execute("""
             CREATE TABLE IF NOT EXISTS metrics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT NOT NULL,
@@ -68,24 +72,24 @@ class MetricsStore:
             )
         """)
 
-        # Create indexes for efficient querying
-        cursor.execute("""
+            # Create indexes for efficient querying
+            cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_metrics_link_timestamp
             ON metrics (link_id, timestamp)
         """)
 
-        cursor.execute("""
+            cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_metrics_timestamp
             ON metrics (timestamp)
         """)
 
-        conn.commit()
-        LOG.info("Database initialized with metrics table")
+            conn.commit()
+            LOG.info("Database initialized with metrics table")
 
-        # Check existing metrics count
-        cursor.execute("SELECT COUNT(*) as count FROM metrics")
-        count = cursor.fetchone()["count"]
-        LOG.info("Existing metrics in database: %d", count)
+            # Check existing metrics count
+            cursor.execute("SELECT COUNT(*) as count FROM metrics")
+            count = cursor.fetchone()["count"]
+            LOG.info("Existing metrics in database: %d", count)
 
     def write_metric(self, link_id: str, metric_type: str, metrics: Dict):
         """
@@ -104,7 +108,8 @@ class MetricsStore:
         cursor = conn.cursor()
 
         try:
-            cursor.execute("""
+            with self.lock:
+                cursor.execute("""
                 INSERT INTO metrics
                 (timestamp, link_id, metric_type, latency_ms, packet_loss_percent, jitter_ms)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -142,21 +147,22 @@ class MetricsStore:
         cursor = conn.cursor()
 
         try:
-            if link_id:
-                cursor.execute("""
+            with self.lock:
+                if link_id:
+                    cursor.execute("""
                     SELECT * FROM metrics
                     WHERE link_id = ?
                     ORDER BY timestamp DESC
                     LIMIT ?
                 """, (link_id, limit))
-            else:
-                cursor.execute("""
+                else:
+                    cursor.execute("""
                     SELECT * FROM metrics
                     ORDER BY timestamp DESC
                     LIMIT ?
                 """, (limit,))
-
-            rows = cursor.fetchall()
+                
+                rows = cursor.fetchall()
             return [dict(row) for row in rows]
 
         except Exception as e:
@@ -179,7 +185,8 @@ class MetricsStore:
         cutoff_time = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
 
         try:
-            cursor.execute("""
+            with self.lock:
+                cursor.execute("""
                 SELECT
                     link_id,
                     metric_type,
@@ -231,8 +238,9 @@ class MetricsStore:
         cursor = conn.cursor()
 
         try:
-            # Get recent metrics for this link
-            cursor.execute("""
+            with self.lock:
+                # Get recent metrics for this link
+                cursor.execute("""
                 SELECT
                     AVG(latency_ms) as avg_latency,
                     AVG(packet_loss_percent) as avg_loss,
@@ -304,7 +312,8 @@ class MetricsStore:
         cursor = conn.cursor()
 
         try:
-            cursor.execute("""
+            with self.lock:
+                cursor.execute("""
                 DELETE FROM metrics WHERE timestamp < ?
             """, (cutoff_time,))
 

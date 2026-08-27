@@ -26,10 +26,12 @@ from datetime import datetime
 from collections import defaultdict, deque
 from typing import Dict, List, Tuple, Optional
 import logging
+import requests
 
 # Add project root to path for imports
 sys.path.insert(0, "/app")
 from monitoring.metrics_store import MetricsStore
+from detection.anomaly_model import is_anomalous
 
 LOG = logging.getLogger("NetworkGuardian.MonitoringAgent")
 
@@ -44,6 +46,18 @@ class LinkMonitor:
         self.link_type = link_type  # "host-switch", "switch-switch"
         self.running = False
         self.thread = None
+        self.pid = None
+        
+        # Load PID if running alongside mininet
+        import os
+        import json
+        if os.path.exists("/tmp/mininet_pids.json"):
+            try:
+                with open("/tmp/mininet_pids.json") as f:
+                    pids = json.load(f)
+                    self.pid = pids.get(self.src_ip)
+            except Exception as e:
+                LOG.warning("Could not read pids: %s", str(e))
 
         # Metrics storage for calculation
         self.latencies = deque(maxlen=20)  # Last 20 RTT readings
@@ -56,7 +70,10 @@ class LinkMonitor:
     def _ping_once(self) -> Optional[float]:
         """Send a single ping and return RTT in ms, or None if lost."""
         # Use ping command: -c 1 (one packet), -W 1 (1s timeout), -q (quiet)
-        cmd = ["ping", "-c", "1", "-W", "1", "-q", self.dst_ip]
+        if self.pid:
+            cmd = ["mnexec", "-a", str(self.pid), "ping", "-c", "1", "-W", "1", "-q", self.dst_ip]
+        else:
+            cmd = ["ping", "-c", "1", "-W", "1", "-q", self.dst_ip]
         try:
             result = subprocess.run(
                 cmd,
@@ -148,6 +165,19 @@ class LinkMonitor:
                     metrics=metrics
                 )
 
+                if self.packet_count > 1:
+                    is_anomaly, score = is_anomalous(metrics)
+                    if is_anomaly:
+                        LOG.warning("Anomaly detected on %s (score %.2f). Triggering reroute...", self.link_id, score)
+                        try:
+                            requests.post(
+                                "http://127.0.0.1:8080/api/fault",
+                                json={"link_id": self.link_id},
+                                timeout=2
+                            )
+                        except Exception as e:
+                            LOG.error("Failed to notify controller: %s", str(e))
+
                 # Log periodically
                 if self.packet_count % 10 == 0:
                     LOG.debug("Link %s: %d packets, %.1f%% loss, %.2f ms latency",
@@ -184,7 +214,10 @@ class LinkMonitor:
 class MonitoringAgent:
     """Main monitoring agent that manages all link monitors."""
 
-    def __init__(self, db_path: str = "/app/monitoring/metrics.db"):
+    def __init__(self, db_path: str = None):
+        import os
+        if db_path is None:
+            db_path = os.environ.get("METRICS_DB_PATH", "/app/monitoring/metrics.db")
         self.store = MetricsStore(db_path)
         self.monitors: Dict[str, LinkMonitor] = {}
         self.running = False
