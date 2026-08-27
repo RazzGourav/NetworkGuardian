@@ -18,13 +18,13 @@ graph TD
     classDef intel fill:#2b6cb0,stroke:#63b3ed,stroke-width:2px,color:#fff
     classDef viz fill:#4a5568,stroke:#f6e05e,stroke-width:2px,color:#fff
 
-    subgraph Control Plane
+    subgraph CP [Control Plane]
         C[Ryu SDN Controller]:::sdn
         RE[Reroute Engine / Graph]:::sdn
         C <-->|Queries shortest path| RE
     end
 
-    subgraph Data Plane
+    subgraph DP [Data Plane]
         S1((Switch 1)):::data
         S2((Switch 2)):::data
         S3((Switch 3)):::data
@@ -47,17 +47,17 @@ graph TD
     C <-->|OpenFlow 1.3| S3
     C <-->|OpenFlow 1.3| S4
 
-    subgraph Intelligence Layer
+    subgraph IL [Intelligence Layer]
         MA[Monitoring Agent]:::intel
         ML[Isolation Forest Model]:::intel
         DB[(SQLite Metrics DB)]:::intel
         
-        MA -->|ICMP Ping Probes| Data Plane
+        MA -->|ICMP Ping Probes| DP
         MA -->|Stores RTT/Loss| DB
         MA -->|Feeds real-time metrics| ML
     end
 
-    subgraph Visualization Layer
+    subgraph VL [Visualization Layer]
         BE[Flask Backend]:::viz
         DB_Viz[(SQLite)]:::viz -.->|Reads| DB
         BE -->|Reads| DB_Viz

@@ -15,14 +15,14 @@ Modern networks are highly dynamic and prone to physical link failures. NetworkG
 
 ```mermaid
 graph TD
-    subgraph SDN Layer
+    subgraph SDN [SDN Layer]
         C[Ryu Controller] <-->|OpenFlow 1.3| S1(Switch 1)
         C <-->|OpenFlow 1.3| S2(Switch 2)
         C <-->|OpenFlow 1.3| S3(Switch 3)
         C <-->|OpenFlow 1.3| S4(Switch 4)
     end
     
-    subgraph Data Plane
+    subgraph DP [Data Plane]
         H1(Host 1) --- S1
         H2(Host 2) --- S1
         S1 ---|Primary| S2
@@ -34,15 +34,15 @@ graph TD
         S3 --- H5(Host 5)
     end
 
-    subgraph Intelligence Layer
-        M[Monitoring Agent] -->|ICMP Ping| Data Plane
+    subgraph IL [Intelligence Layer]
+        M[Monitoring Agent] -->|ICMP Ping| DP
         M -->|Metrics| DB[(SQLite / InfluxDB)]
         M -->|Anomaly Detection| ML[Isolation Forest]
         ML -->|Trigger Reroute| C
         ML -->|Trigger Alert| B
     end
     
-    subgraph Visualization
+    subgraph VL [Visualization]
         B[Flask Backend] -->|Reads| DB
         B <-->|WebSockets| D[Frontend Dashboard]
     end
@@ -84,5 +84,6 @@ We simulated link failures (bringing down the primary `s1-s2` link) dynamically 
 ![Dashboard fault simulation](docs/dashboard_demo.webp)
 
 ## 📖 Documentation
+- For system architecture and design details, see [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md).
 - For detailed product requirements, see the [PRD (NetworkGuardian_PRD.md)](NetworkGuardian_PRD.md).
 - For step-by-step development progress, see [PROGRESS.md](PROGRESS.md).
