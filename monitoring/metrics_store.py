@@ -34,7 +34,7 @@ import threading
 class MetricsStore:
     """SQLite-based time-series metrics storage for network link health."""
 
-    def __init__(self, db_path: str = "/app/monitoring/metrics.db"):
+    def __init__(self, db_path: str = "/app/data/metrics.db"):
         self.db_path = db_path
         self.conn: Optional[sqlite3.Connection] = None
         self.lock = threading.Lock()

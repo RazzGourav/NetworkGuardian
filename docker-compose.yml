@@ -33,7 +33,7 @@ services:
     depends_on:
       - mininet-controller
     volumes:
-      - ./monitoring/metrics.db:/app/monitoring/metrics.db:rw
+      - ./data:/app/data:rw
       - ./logs:/app/logs:rw
       - /lib/modules:/lib/modules:ro
     environment:
@@ -46,3 +46,21 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # ── Phase 5: Dashboard & Visualization ─────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: networkguardian-backend
+    ports:
+      - "5000:5000"
+    depends_on:
+      - monitoring-agent
+    volumes:
+      - ./data:/app/data:ro
+      - ./frontend:/app/frontend:ro
+      - ./backend:/app/backend:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

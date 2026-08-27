@@ -199,6 +199,39 @@
 
 ---
 
+## Phase 5: Dashboard & Visualization
+**Completed:** 2026-08-27  
+**Commit:** Pending
+
+### What was built
+1. **Backend Flask Application** (`backend/app.py`)
+   - Exposes REST APIs: `/api/topology` and `/api/metrics` reading from the central SQLite `metrics.db`.
+   - Uses `Flask-SocketIO` to expose a WebSocket channel for real-time push events.
+2. **Frontend UI** (`frontend/`)
+   - A single-pane-of-glass dashboard built with HTML, CSS, and vanilla JS.
+   - Designed using premium glassmorphism dark-mode aesthetics for a modern NOC feel.
+   - Integrates **D3.js** for an interactive force-directed network graph topology.
+   - Integrates **Chart.js** for real-time latency line charting.
+   - Listens to SocketIO events to dynamically inject fault/recovery alerts directly into the Event Log without page refresh.
+3. **Integration Updates**
+   - Modified `agent.py` to trigger both the SDN controller (`/api/fault`) and the backend Dashboard (`/api/event`) via HTTP POST upon Isolation Forest anomaly detection.
+   - Handled complex Docker Compose data volume mounting to seamlessly share SQLite database between monitoring and backend containers.
+
+### Testing & Verification
+- Started the entire stack with `docker compose up -d`.
+- Used `docker exec networkguardian-mininet ip link set s1-eth3 down` to manually inject a live link fault into the network.
+- Verified that the dashboard instantly updated its topology visualizer and broadcasted the event message: `System: Fault Detected`.
+- Captured an automated browser subagent video of the fault event resolving and saved the result to `docs/dashboard_demo.webp`.
+
+### Challenges Resolved
+1. **Database Access in Docker**: Encountered "unable to open database file" because `metrics.db` was mounted directly as a file. Solved by replacing it with a directory-level named volume mount (`./data:/app/data`) shared across the `monitoring-agent` and `backend` containers.
+2. **WSL2 Host Networking**: Encountered connectivity issues connecting to the backend via `network_mode: host` from the browser. Resolved by using standard port forwarding (`5000:5000`) on the backend container.
+
+### Next Phase (Phase 6)
+- Demo recording & polishing README.
+
+---
+
 ## Phase 6: Demo & Polish
 **Status:** Not started
 

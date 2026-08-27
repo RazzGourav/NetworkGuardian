@@ -17,6 +17,7 @@ other links. Designed to run in the monitoring-agent Docker container alongside
 Mininet and the SDN controller.
 """
 
+import os
 import sys
 import time
 import subprocess
@@ -170,13 +171,24 @@ class LinkMonitor:
                     if is_anomaly:
                         LOG.warning("Anomaly detected on %s (score %.2f). Triggering reroute...", self.link_id, score)
                         try:
+                            # 1. Trigger the SDN controller to reroute
                             requests.post(
                                 "http://127.0.0.1:8080/api/fault",
                                 json={"link_id": self.link_id},
                                 timeout=2
                             )
+                            # 2. Notify the dashboard backend for live WebSocket updates
+                            requests.post(
+                                "http://127.0.0.1:5000/api/event",
+                                json={
+                                    "type": "fault",
+                                    "link_id": self.link_id,
+                                    "message": f"Anomaly detected on {self.link_id}. Reroute triggered."
+                                },
+                                timeout=1
+                            )
                         except Exception as e:
-                            LOG.error("Failed to notify controller: %s", str(e))
+                            LOG.error("Failed to notify controller/backend: %s", str(e))
 
                 # Log periodically
                 if self.packet_count % 10 == 0:
@@ -212,12 +224,11 @@ class LinkMonitor:
 
 
 class MonitoringAgent:
-    """Main monitoring agent that manages all link monitors."""
+    """Manages monitoring across the whole topology."""
 
-    def __init__(self, db_path: str = None):
-        import os
+    def __init__(self, db_path=None):
         if db_path is None:
-            db_path = os.environ.get("METRICS_DB_PATH", "/app/monitoring/metrics.db")
+            db_path = os.environ.get("METRICS_DB_PATH", "/app/data/metrics.db")
         self.store = MetricsStore(db_path)
         self.monitors: Dict[str, LinkMonitor] = {}
         self.running = False

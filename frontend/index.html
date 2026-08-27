@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetworkGuardian Dashboard</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Libraries -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header glass-panel">
+            <div class="logo">
+                <div class="logo-icon"></div>
+                <h1>NetworkGuardian</h1>
+            </div>
+            <div class="system-status">
+                <span class="status-indicator healthy" id="global-status-indicator"></span>
+                <span id="global-status-text">System: OK</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Pane: Topology -->
+            <section class="pane left-pane glass-panel">
+                <div class="pane-header">
+                    <h2>Live Topology</h2>
+                    <div class="legend">
+                        <span class="legend-item"><span class="dot healthy"></span> Healthy</span>
+                        <span class="legend-item"><span class="dot degraded"></span> Degraded</span>
+                        <span class="legend-item"><span class="dot down"></span> Down</span>
+                    </div>
+                </div>
+                <div id="topology-container" class="topology-container">
+                    <!-- D3 Graph will be rendered here -->
+                </div>
+            </section>
+
+            <!-- Right Pane: Metrics & Logs -->
+            <section class="pane right-pane">
+                <!-- Top Right: Metrics Chart -->
+                <div class="glass-panel chart-panel">
+                    <div class="pane-header">
+                        <h2>Real-time Latency (ms)</h2>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="metricsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Bottom Right: Event Log -->
+                <div class="glass-panel log-panel">
+                    <div class="pane-header">
+                        <h2>Event Log</h2>
+                        <span class="live-badge">LIVE</span>
+                    </div>
+                    <div id="event-log" class="event-log">
+                        <!-- Log entries will be prepended here -->
+                        <div class="log-entry info">
+                            <span class="time">System</span>
+                            <span class="message">Dashboard initialized. Connecting to WebSocket...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Application Logic -->
+    <script src="dashboard.js"></script>
+</body>
+</html>
