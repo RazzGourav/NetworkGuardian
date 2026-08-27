@@ -1,4 +1,4 @@
-.PHONY: build up down test clean logs
+.PHONY: build up down test test-monitoring clean logs
 
 build:
 	docker compose build
@@ -11,6 +11,9 @@ down:
 
 test:
 	docker compose run --rm mininet-controller --test pingall
+
+test-monitoring:
+	docker compose run --rm monitoring-agent python -m pytest tests/test_monitoring.py -v
 
 logs:
 	docker compose logs -f

@@ -20,4 +20,29 @@ services:
     tty: true
     volumes:
       - /lib/modules:/lib/modules:ro
+      - ./logs:/app/logs:rw  # Share logs with host for debugging
     restart: unless-stopped
+
+  # ── Phase 2: Monitoring Agent + Metrics Storage ───────────────────
+  monitoring-agent:
+    build:
+      context: .
+      dockerfile: monitoring/Dockerfile
+    container_name: networkguardian-monitoring
+    network_mode: host  # Need to ping hosts in the topology
+    depends_on:
+      - mininet-controller
+    volumes:
+      - ./monitoring/metrics.db:/app/monitoring/metrics.db:rw
+      - ./logs:/app/logs:rw
+      - /lib/modules:/lib/modules:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    # Wait for mininet to be ready before starting monitoring
+    healthcheck:
+      test: ["CMD", "ping", "-c", "1", "10.0.0.1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

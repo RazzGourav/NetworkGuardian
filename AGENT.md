@@ -123,7 +123,7 @@ Append this block after every phase:
 
 ## 4. Phase-Wise Development Instructions
 > Read NetworkGuardian_PRD.md and follow and check if something left
-> Current Phase: **Phase 1** *(agent: update this line as you progress)*
+> Current Phase: **Phase 2** *(agent: update this line as you progress)*
 
 ---
 
