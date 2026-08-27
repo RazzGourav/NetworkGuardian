@@ -1,0 +1,4 @@
+# NetworkGuardian — Python dependencies
+# Phase 1: SDN controller
+ryu
+eventlet

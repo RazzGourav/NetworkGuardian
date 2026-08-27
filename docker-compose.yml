@@ -1,5 +1,5 @@
 # NetworkGuardian — Docker Compose
-# Services will be added incrementally per phase.
+# Services are added incrementally per phase.
 #
 # Phase 1: mininet-controller (topology + Ryu SDN controller)
 # Phase 2: monitoring-agent, influxdb (or sqlite volume)
@@ -7,4 +7,17 @@
 
 version: "3.9"
 
-services: {}
+services:
+  # ── Phase 1: Combined Mininet + Ryu controller ────────────────────
+  mininet-controller:
+    build:
+      context: .
+      dockerfile: topology/Dockerfile
+    container_name: networkguardian-mininet
+    privileged: true
+    network_mode: host
+    stdin_open: true
+    tty: true
+    volumes:
+      - /lib/modules:/lib/modules:ro
+    restart: unless-stopped
