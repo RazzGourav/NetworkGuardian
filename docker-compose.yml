@@ -1,0 +1,10 @@
+# NetworkGuardian — Docker Compose
+# Services will be added incrementally per phase.
+#
+# Phase 1: mininet-controller (topology + Ryu SDN controller)
+# Phase 2: monitoring-agent, influxdb (or sqlite volume)
+# Phase 5: backend, frontend
+
+version: "3.9"
+
+services: {}
