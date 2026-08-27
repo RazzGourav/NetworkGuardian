@@ -81,7 +81,7 @@ We simulated link failures (bringing down the primary `s1-s2` link) dynamically 
 
 ## 🎥 Demonstration
 
-![Dashboard fault simulation](docs/dashboard_demo.webp)
+![Dashboard fault simulation](docs/dashboard_demo.png)
 
 ## 📖 Documentation
 - For system architecture and design details, see [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md).
