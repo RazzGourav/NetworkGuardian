@@ -20,7 +20,8 @@ services:
     tty: true
     volumes:
       - /lib/modules:/lib/modules:ro
-      - ./logs:/app/logs:rw  # Share logs with host for debugging
+      - ./logs:/app/logs:rw
+      - ovs_conf:/etc/openvswitch  # Share logs with host for debugging
     restart: unless-stopped
 
   # ── Phase 2: Monitoring Agent + Metrics Storage ───────────────────
@@ -35,6 +36,7 @@ services:
     volumes:
       - ./data:/app/data:rw
       - ./logs:/app/logs:rw
+      - ovs_conf:/etc/openvswitch
       - /lib/modules:/lib/modules:ro
     environment:
       - PYTHONUNBUFFERED=1
@@ -64,3 +66,6 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
+
+volumes:
+  ovs_conf:

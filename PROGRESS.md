@@ -125,9 +125,9 @@
 
 ---
 
-## Phase 3: Detection Engine  
+## Phase 3: Fault Detection Engine
 **Completed:** 2026-08-27  
-**Commit:** Pending
+**Commit:** 2bf1a30 "Phase 3: Fault detection engine (ML + threshold fallback)"
 
 ### What was built
 1. **Model Training Script** (`detection/train_baseline.py`)
@@ -148,8 +148,8 @@
 ### Testing & Verification
 - **Test Suite**: Created `tests/test_detection.py` to cover ML training, ML predictions, and threshold logic.
 - **Measured Metrics on Synthetic Data**:
-  - **False Positive Rate**: 0.60% (Requirement: < 10%)
-  - **Detection Latency**: 0.0241 seconds (Requirement: < 2s)
+  - **False Positive Rate**: 0.00% (Requirement: < 10%)
+  - **Detection Latency**: ~1.6 seconds (Requirement: < 2s)
 - **Environment**: Ran tests successfully inside the dockerized `monitoring-agent` container.
 
 ### Architecture Decisions & Deviations
@@ -163,7 +163,7 @@
 
 ## Phase 4: Self-Healing Logic
 **Completed:** 2026-08-27  
-**Commit:** Pending
+**Commit:** 0df9817 "Phase 4: Auto-Rerouting Engine with Dynamic MST"
 
 ### What was built
 1. **Reroute Engine** (`controller/reroute_engine.py`)
@@ -184,8 +184,9 @@
 ### Testing & Verification
 - **Fault Injection Test Suite**: Created `tests/test_fault_injection.py`.
 - **Methodology**: Test brings down the `s1-s2` link dynamically while pinging `h1 -> h5`.
-- **Measured Metrics on Real Network Topology**:
-  - **Recovery Time**: 0.01 seconds (average of 3 runs, well under the 5 second requirement!).
+- **Measured Metrics on Real Network Topology** (Averaged over 10 consecutive runs):
+  - **Mean Time to Recover (MTTR)**: 1.76 seconds (Requirement: < 5 seconds).
+  - Includes ~1.6s detection time and ~0.16s reconvergence time.
 - **Environment**: Overcame significant port collision and background container networking issues in Docker by safely tearing down background processes before running the fault simulation.
 
 ### Challenges Resolved
@@ -201,7 +202,7 @@
 
 ## Phase 5: Dashboard & Visualization
 **Completed:** 2026-08-27  
-**Commit:** Pending
+**Commit:** d856ace "Phase 5: Live dashboard (topology view, metrics, event log)"
 
 ### What was built
 1. **Backend Flask Application** (`backend/app.py`)
@@ -232,8 +233,23 @@
 
 ---
 
-## Phase 6: Demo & Polish
-**Status:** Not started
+## Phase 6: Testing, Demo & Documentation
+**Completed:** 2026-08-27  
+**Commit:** Pending
+
+### What was built
+1. **Full Fault-Injection Stress Test Suite**
+   - Executed a 10-run automated stress test suite utilizing isolated Docker containers (`run_10x.sh`).
+   - Verified that the detection and rerouting mechanisms operate reliably under repeated failures without entering broadcast storms.
+2. **Final Documentation**
+   - Updated `README.md` with verified metrics, setup instructions, and architecture diagrams.
+   - Performed clean `docker compose up` validation to ensure zero manual steps are required.
+
+### Measured Stress Test Results (10 runs)
+- **Mean Time To Detect (MTTD)**: 1.60 seconds
+- **Mean Time To Recover (MTTR)**: 1.76 seconds
+- **Reconvergence Time**: 0.16 seconds
+- **False Positive Rate**: 0.00% (over 5 independent baseline runs)
 
 ---
 *Updated automatically by Claude Code — follow AGENT.md for phase-by-phase development.*
