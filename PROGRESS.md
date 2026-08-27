@@ -15,7 +15,7 @@
 
 ## Phase 1: Foundation & Topology Setup
 **Completed:** 2026-08-27  
-**Commit:** [pending]
+**Commit:** 896ecaf "Phase 1: Mininet topology + Ryu controller, dockerized"
 
 ### What was built
 1. **Mininet Topology** (`topology/mininet_topo.py`)
@@ -65,7 +65,7 @@
 
 ## Phase 2: Monitoring Layer
 **Completed:** 2026-08-27  
-**Commit:** [pending]
+**Commit:** 02e2154 "Phase 2: Monitoring agent + time-series metrics storage"
 
 ### What was built
 1. **Monitoring Agent** (`monitoring/agent.py`)
