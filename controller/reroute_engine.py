@@ -47,10 +47,11 @@ class RerouteEngine:
             return None
 
     def get_port_for_next_hop(self, current_dpid: int, next_dpid: int):
+        """Retrieve the local port number connecting to the next-hop switch."""
         return self.port_map.get((current_dpid, next_dpid))
 
     def compute_all_paths(self):
-        """Compute all-pairs shortest paths."""
+        """Compute all-pairs shortest paths using Dijkstra's algorithm."""
         paths = {}
         for src in self.graph.nodes():
             paths[src] = {}
